@@ -3,6 +3,7 @@ import 'abortcontroller-polyfill/dist/polyfill-patch-fetch'
 import { useReducerAsync } from "use-reducer-async";
 const initialState = {query: '', queries: [], isSearching: false, isShowingRecentQueries: false};
 import algoliasearch from 'algoliasearch/lite';
+import {useEffect, useRef, useState} from "react";
 
 const client = algoliasearch('BSEPWDMWHK', 'd5d31ebc204b43b0c1b6a4aa03e0658c');
 const index = client.initIndex('staging_articles');
@@ -44,15 +45,35 @@ const RecentQueries = ({queries}) => (
     </ul>
 )
 
+const useKeyPress = (key, action) => {
+  useEffect(() => {
+    const handleKeyUp = (e) => {
+      console.log(`Pressed: '${action}'`);
+
+      if (e.key === key) {
+        action();
+      }
+    }
+    window.addEventListener('keyup', handleKeyUp);
+    return () => window.removeEventListener('keyup', handleKeyUp)
+  }, [])
+}
+
+
+
 const HomeSearch = () => {
   const [state, dispatch] = useReducerAsync(searchReducer, initialState, actionHandlers);
+  const inputRef = useRef();
 
+  const showRecentSearches = () => {
+    console.log('dispatching')
+    dispatch({type: 'show_recent_queries'});
+  }
 
-  const resetSearch = e => {
-    if (e.key === 'Escape') {
-      dispatch({type: 'initial'});
-    }
-  };
+  const focusInputBox = () => {
+    inputRef.current && inputRef.current.focus();
+  }
+  useKeyPress('/', focusInputBox);
 
   const performSearch = e => {
     if (e.target.value === '') {
@@ -65,13 +86,16 @@ const HomeSearch = () => {
     }
   };
 
-  const showRecentSearches = e => {
-    dispatch({type: 'show_recent_queries', query: e.target.value});
-  }
+  const resetSearch = e => {
+    if (e.key === 'Escape') {
+      dispatch({type: 'initial'});
+    }
+  };
 
   return <div>
     <input className="border border-gray-500 rounded-md w-full p-2 text-gray-600"
            type="text"
+           ref={inputRef}
            value={state.query}
            onKeyUp={resetSearch}
            onChange={performSearch}
