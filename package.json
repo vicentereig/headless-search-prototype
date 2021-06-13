@@ -8,9 +8,12 @@
     "start": "next start"
   },
   "dependencies": {
+    "abortcontroller-polyfill": "^1.7.3",
+    "algoliasearch": "^4.9.2",
     "next": "latest",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "use-reducer-async": "^2.0.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.0.4",
