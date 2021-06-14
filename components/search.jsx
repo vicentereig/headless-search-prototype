@@ -2,7 +2,7 @@ import 'abortcontroller-polyfill/dist/polyfill-patch-fetch'
 import { useReducerAsync } from "use-reducer-async";
 
 import algoliasearch from 'algoliasearch/lite';
-import {createContext, useContext, useEffect, useRef, useState} from "react";
+import {createContext, createElement, useContext, useEffect, useRef, useState} from "react";
 
 const client = algoliasearch('BSEPWDMWHK', 'd5d31ebc204b43b0c1b6a4aa03e0658c');
 const index = client.initIndex('staging_articles');
@@ -10,7 +10,8 @@ const initialState = {
     query: '',
     queries: [],
     searching: false,
-    showingRecentQueries: false
+    showingRecentQueries: false,
+    onChange: null,
 };
 
 const searchReducer = (state, action) => {
@@ -26,7 +27,7 @@ const searchReducer = (state, action) => {
         case 'show_recent_queries':
             return { ...state, showingRecentQueries: true, searching: false };
         case 'show_results':
-            return state.query === action.query ? { ...state, showingResults: true} : state;
+            return state.query === action.query ? { ...state, showingResults: true, showingResultsNotFound: false} : state;
         case 'show_results_not_found':
             return state.query === action.query ? { ...state, showingResults: false, showingResultsNotFound: true} : state;
         case 'add_recent_query':
@@ -42,7 +43,7 @@ export const useSearch = () => useContext(SearchContext);
 
 const actionHandlers = {
     'searching': ({dispatch, getState}) => async (action) => {
-        const { query, hitsPerPage } = action;
+        const { query } = action;
         dispatch({type: 'start_searching', query});
         const results = await index.search(query, {hitsPerPage: getState().hitsPerPage})
         dispatch({type: 'end_searching', results})
@@ -50,14 +51,6 @@ const actionHandlers = {
         results && results.nbHits > 0 ? dispatch({type: 'show_results', query}) : dispatch({type: 'show_results_not_found', query});
     }
 }
-
-const RecentQueries = ({queries}) => (
-    <ul className="text-sm text-gray-300">
-        {queries.map(q => (
-            <li key={q}>{q}</li>
-        ))}
-    </ul>
-)
 
 const useKeyPress = (key, action) => {
     useEffect(() => {
@@ -72,8 +65,8 @@ const useKeyPress = (key, action) => {
 }
 
 
-const Search = ({children, hitsPerPage}) => {
-    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, hitsPerPage }, actionHandlers);
+const Search = ({children, hitsPerPage, onChange}) => {
+    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, hitsPerPage, onChange }, actionHandlers);
     const providerState = {
         state, dispatch
     }
@@ -134,18 +127,49 @@ const Input = ({placeholder, query, ...props}) => {
     />)
 };
 
+
+const RecentQueries = ({queries}) => (
+    <ul className="text-sm text-gray-300">
+        {queries.map(q => (
+            <li key={q}>{q}</li>
+        ))}
+    </ul>
+);
+
 const Status = ({children}) => {
     const {state} = useSearch();
     return <>{children ? children(state) : null}</>;
-}
+};
 
 const Hits = ({children}) => {
     const {state} = useSearch();
-    if (!children || !state.showingResults && !state.showingResultsNotFound) {
+    if (!children || state.showingResultsNotFound || !state.showingResults && !state.showingResultsNotFound ) {
         return null
     }
     return children(state);
-}
+};
+
+const Miss = ({children}) => {
+    const {state} = useSearch();
+    if (!state.showingResultsNotFound) {
+        return null;
+    }
+
+    return children(state);
+};
+
+const Hit = ({children, value, as='li', ...props}) => {
+    const {state, dispatch} = useSearch();
+    const onClick = () => {
+        state.onChange(value)
+        // this one should be optional: for example, only if Search has enabled RecentQueries.
+        dispatch({type: 'add_recent_query', query: state.query});
+    }
+    return createElement(as, {...props, onClick}, children);
+};
+
+Search.Miss = Miss;
 Search.Status = Status;
 Search.Input = Input;
 Search.Hits = Hits;
+Search.Hit = Hit;

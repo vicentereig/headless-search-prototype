@@ -1,7 +1,11 @@
 import Head from 'next/head';
 import Search from "../components/search";
-import {useEffect, useState} from "react";
+import {createElement, useEffect, useState} from "react";
 
+// TODO: When showing results in a dropdown under the [Status][Input][Action]
+//       it may be convenient have a component in charge of opening/closing the dropdown.
+//       Exposing its state so it can be animated.
+const Listbox = ({children}) => <div>{children}</div>;
 
 const HomeSearch = () => {
   const [selectedArticle, setSelectedArticle] = useState();
@@ -12,7 +16,7 @@ const HomeSearch = () => {
   }, [selectedArticle]);
 
   return (
-    <Search hitsPerPage={4}>
+    <Search hitsPerPage={4} onChange={setSelectedArticle}>
       <Search.Status>
           {(state) => (
               state.searching ? <p>Spinner</p> : <p>Not active</p>
@@ -20,29 +24,23 @@ const HomeSearch = () => {
       </Search.Status>
       <Search.Input placeholder="Search the documentation"
                     className="border border-gray-500 rounded-md w-full p-2 text-gray-600"/>
-      <Search.Hits>
-          {({showingResults, showingResultsNotFound, hits, nbHits, nbPages, query}) => {
-            if (showingResultsNotFound) {
-                return <p>No results for {query}</p>
-            }
-            if(showingResults) {
-              return (
-                  <>
-                      <p>Found {nbHits} results in {nbPages} pages</p>
-                      <ol>
-                          {hits.map(hit => (
-                              // need to wrap this one up so it can save a search query when clicking on a result
-                            <li onClick={() => setSelectedArticle(hit)} key={hit.slug}>
-                                {hit.title}
-                            </li>
-                          ))}
-                      </ol>
-                  </>
-              );
-            }
-          }
-        }
-      </Search.Hits>
+      <Listbox>
+        <Search.Miss>{({query}) => (<p>No results for {query}.</p>)}</Search.Miss>
+        <Search.Hits>
+        {({ hits, nbHits, nbPages}) => (
+          <>
+            <p>Found {nbHits} results in {nbPages} pages</p>
+            <ol>
+              {hits.map(hit => (
+                <Search.Hit value={hit} key={hit.slug} as="li">
+                    {hit.title}
+                </Search.Hit>
+              ))}
+            </ol>
+          </>
+        )}
+        </Search.Hits>
+      </Listbox>
     </Search>
   );
 }
