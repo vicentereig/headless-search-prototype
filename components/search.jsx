@@ -42,10 +42,10 @@ const SearchContext = createContext();
 export const useSearch = () => useContext(SearchContext);
 
 const actionHandlers = {
-    'searching': ({dispatch}) => async (action) => {
-        const { query } = action;
+    'searching': ({dispatch, getState}) => async (action) => {
+        const { query, hitsPerPage } = action;
         dispatch({type: 'start_searching', query});
-        const results = await index.search(query)
+        const results = await index.search(query, {hitsPerPage: getState().hitsPerPage})
         dispatch({type: 'end_searching', results})
 
         results && results.nbHits > 0 ? dispatch({type: 'show_results', query}) : dispatch({type: 'show_results_not_found', query});
@@ -73,8 +73,8 @@ const useKeyPress = (key, action) => {
 }
 
 
-const Search = ({children, ...props}) => {
-    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, ...props}, actionHandlers);
+const Search = ({children, hitsPerPage}) => {
+    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, hitsPerPage }, actionHandlers);
     const providerState = {
         state, dispatch
     }
@@ -142,10 +142,10 @@ const Status = ({children}) => {
 
 const Hits = ({children}) => {
     const {state} = useSearch();
-    if (!state.showingResults && !state.showingResultsNotFound) {
+    if (!children || !state.showingResults && !state.showingResultsNotFound) {
         return null
     }
-    return <>{children ? children(state) : null}</>;
+    return children(state);
 }
 Search.Status = Status;
 Search.Input = Input;

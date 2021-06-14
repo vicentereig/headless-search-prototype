@@ -12,9 +12,8 @@ const HomeSearch = () => {
   }, [selectedArticle]);
 
   return (
-    <Search onChange={setSelectedArticle}>
+    <Search hitsPerPage={4}>
       <Search.Status>
-          {/*// where to expose the callback?*/}
           {(state) => (
               state.searching ? <p>Spinner</p> : <p>Not active</p>
           )}
@@ -22,17 +21,18 @@ const HomeSearch = () => {
       <Search.Input placeholder="Search the documentation"
                     className="border border-gray-500 rounded-md w-full p-2 text-gray-600"/>
       <Search.Hits>
-          {({showingResults, showingResultsNotFound, onChange, hits, nbHits, query}) => {
+          {({showingResults, showingResultsNotFound, hits, nbHits, nbPages, query}) => {
             if (showingResultsNotFound) {
                 return <p>No results for {query}</p>
             }
             if(showingResults) {
               return (
                   <>
-                      <p>Found {nbHits} results</p>
+                      <p>Found {nbHits} results in {nbPages} pages</p>
                       <ol>
                           {hits.map(hit => (
-                            <li onClick={() => onChange(hit)} key={hit.slug}>
+                              // need to wrap this one up so it can save a search query when clicking on a result
+                            <li onClick={() => setSelectedArticle(hit)} key={hit.slug}>
                                 {hit.title}
                             </li>
                           ))}
