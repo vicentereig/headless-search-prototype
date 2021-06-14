@@ -8,7 +8,6 @@ const client = algoliasearch('BSEPWDMWHK', 'd5d31ebc204b43b0c1b6a4aa03e0658c');
 const index = client.initIndex('staging_articles');
 const initialState = {
     query: '',
-    onChange: null,
     queries: [],
     searching: false,
     showingRecentQueries: false
@@ -19,7 +18,7 @@ const searchReducer = (state, action) => {
 
     switch(action.type) {
         case 'initial':
-            return {...initialState};
+            return {...initialState, hitsPerPage: state.hitsPerPage};
         case 'start_searching':
             return { ...state, query: action.query, searching: true, showingRecentQueries: false};
         case 'end_searching':
