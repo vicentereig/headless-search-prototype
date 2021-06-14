@@ -7,19 +7,42 @@ const HomeSearch = () => {
   const [selectedArticle, setSelectedArticle] = useState();
   useEffect(() => {
     if(selectedArticle) {
-      console.log(`Now do something with ${selectedArticle}....`)
+      console.log(`Now do something with ${selectedArticle.title}....`)
     }
   }, [selectedArticle]);
 
   return (
     <Search onChange={setSelectedArticle}>
       <Search.Status>
-        {(state) => (
-          state.searching ? <p>Spinner</p> : <p>Not active</p>
-        )}
+          {/*// where to expose the callback?*/}
+          {(state) => (
+              state.searching ? <p>Spinner</p> : <p>Not active</p>
+          )}
       </Search.Status>
       <Search.Input placeholder="Search the documentation"
                     className="border border-gray-500 rounded-md w-full p-2 text-gray-600"/>
+      <Search.Hits>
+          {({showingResults, showingResultsNotFound, onChange, hits, nbHits, query}) => {
+            if (showingResultsNotFound) {
+                return <p>No results for {query}</p>
+            }
+            if(showingResults) {
+              return (
+                  <>
+                      <p>Found {nbHits} results</p>
+                      <ol>
+                          {hits.map(hit => (
+                            <li onClick={() => onChange(hit)} key={hit.slug}>
+                                {hit.title}
+                            </li>
+                          ))}
+                      </ol>
+                  </>
+              );
+            }
+          }
+        }
+      </Search.Hits>
     </Search>
   );
 }

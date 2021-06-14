@@ -19,18 +19,22 @@ const searchReducer = (state, action) => {
 
     switch(action.type) {
         case 'initial':
-            return {...initialState, onChange: action.onChange};
+            return {...initialState};
         case 'start_searching':
             return { ...state, query: action.query, searching: true, showingRecentQueries: false};
         case 'end_searching':
-            return { ...state, searching: false, results: action.results }
+            return { ...state, searching: false, ...action.results }
         case 'show_recent_queries':
             return { ...state, showingRecentQueries: true, searching: false };
+        case 'show_results':
+            return state.query === action.query ? { ...state, showingResults: true} : state;
+        case 'show_results_not_found':
+            return state.query === action.query ? { ...state, showingResults: false, showingResultsNotFound: true} : state;
         case 'add_recent_query':
             const {queries} = state;
             return { ...state, queries: [...queries.slice(0,2), action.query] }
         default:
-            throw new Error();
+            throw new Error(`action not found: ${action.type}`);
     }
 }
 
@@ -39,9 +43,12 @@ export const useSearch = () => useContext(SearchContext);
 
 const actionHandlers = {
     'searching': ({dispatch}) => async (action) => {
-        dispatch({type: 'start_searching', query: action.query});
-        const results = await index.search(action.query)
+        const { query } = action;
+        dispatch({type: 'start_searching', query});
+        const results = await index.search(query)
         dispatch({type: 'end_searching', results})
+
+        results && results.nbHits > 0 ? dispatch({type: 'show_results', query}) : dispatch({type: 'show_results_not_found', query});
     }
 }
 
@@ -71,7 +78,12 @@ const Search = ({children, ...props}) => {
     const providerState = {
         state, dispatch
     }
-    return <SearchContext.Provider value={providerState}>{children}</SearchContext.Provider>
+    return (
+        <SearchContext.Provider value={providerState}>
+            {children}
+        </SearchContext.Provider>
+
+    );
 };
 
 export default Search;
@@ -84,8 +96,10 @@ const Input = ({placeholder, query, ...props}) => {
 
 
     useEffect(() => {
-        inputRef.current.value = state.query;
-    }, [state.query, inputRef]);
+        if(state.searching) {
+            inputRef.current.value = state.query;
+        }
+    }, [state.query, state.searching, inputRef]);
 
     const focusInputBox = () => {
         inputRef.current && inputRef.current.focus();
@@ -121,11 +135,18 @@ const Input = ({placeholder, query, ...props}) => {
     />)
 };
 
-
 const Status = ({children}) => {
-    const {state, dispatch} = useSearch();
+    const {state} = useSearch();
     return <>{children ? children(state) : null}</>;
 }
 
+const Hits = ({children}) => {
+    const {state} = useSearch();
+    if (!state.showingResults && !state.showingResultsNotFound) {
+        return null
+    }
+    return <>{children ? children(state) : null}</>;
+}
 Search.Status = Status;
 Search.Input = Input;
+Search.Hits = Hits;
