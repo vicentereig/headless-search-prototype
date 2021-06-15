@@ -12,6 +12,8 @@ const initialState = {
     searching: false,
     page: 0,
     showingRecentQueries: false,
+    showingResultsNotFound: false,
+    showingResults: false,
     onChange: null,
 };
 
@@ -48,7 +50,6 @@ const actionHandlers = {
         const { hitsPerPage } = getState();
         dispatch({type: 'start_searching', query});
         const results = await index.search(query, {page, hitsPerPage})
-        console.log(results);
         dispatch({type: 'end_searching', results})
 
         results && results.nbHits > 0 ? dispatch({type: 'show_results', query}) : dispatch({type: 'show_results_not_found', query});
@@ -68,14 +69,20 @@ const useKeyPress = (key, action) => {
 }
 
 
-const Search = ({children, hitsPerPage, onChange}) => {
+const Search = ({children, hitsPerPage, onChange, className}) => {
     const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, hitsPerPage, onChange }, actionHandlers);
     const providerState = {
         state, dispatch
     }
+    useEffect(() => {
+        console.log(`state changed`, state)
+    }, [state]);
+
     return (
         <SearchContext.Provider value={providerState}>
-            {children}
+            <div className={className}>
+                {children(state)}
+            </div>
         </SearchContext.Provider>
 
     );
@@ -137,28 +144,6 @@ const RecentQueries = ({queries}) => (
     </ul>
 );
 
-const Status = ({children}) => {
-    const {state} = useSearch();
-    return <>{children ? children(state) : null}</>;
-};
-
-const Hits = ({children}) => {
-    const {state} = useSearch();
-    if (!children || state.showingResultsNotFound || !state.showingResults && !state.showingResultsNotFound ) {
-        return null
-    }
-    return children(state);
-};
-
-const Miss = ({children}) => {
-    const {state} = useSearch();
-    if (!state.showingResultsNotFound) {
-        return null;
-    }
-
-    return children(state);
-};
-
 const Hit = ({children, value, as='li', ...props}) => {
     const {state, dispatch} = useSearch();
     const onClick = () => {
@@ -181,9 +166,6 @@ const MoreResults = ({children, as, ...props}) => {
     return createElement(as, {...props, onClick}, children);
 }
 
-Search.Miss = Miss;
-Search.Status = Status;
 Search.Input = Input;
-Search.Hits = Hits;
 Search.MoreResults = MoreResults;
 Search.Hit = Hit;
