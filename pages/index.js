@@ -37,6 +37,12 @@ const HomeSearch = () => {
                 </Search.Hit>
               ))}
             </ol>
+            <div>
+                <Search.MoreResults as="a" className="text-purple-600 font-bold">
+                    More results
+                </Search.MoreResults>
+            </div>
+
           </>
         )}
         </Search.Hits>

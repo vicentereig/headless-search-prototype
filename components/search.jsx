@@ -10,6 +10,7 @@ const initialState = {
     query: '',
     queries: [],
     searching: false,
+    page: 0,
     showingRecentQueries: false,
     onChange: null,
 };
@@ -27,7 +28,7 @@ const searchReducer = (state, action) => {
         case 'show_recent_queries':
             return { ...state, showingRecentQueries: true, searching: false };
         case 'show_results':
-            return state.query === action.query ? { ...state, showingResults: true, showingResultsNotFound: false} : state;
+            return state.query === action.query ? { ...state, showingLastPage: state.page + 1 === state.nbPages, showingResults: true, showingResultsNotFound: false} : state;
         case 'show_results_not_found':
             return state.query === action.query ? { ...state, showingResults: false, showingResultsNotFound: true} : state;
         case 'add_recent_query':
@@ -43,9 +44,11 @@ export const useSearch = () => useContext(SearchContext);
 
 const actionHandlers = {
     'searching': ({dispatch, getState}) => async (action) => {
-        const { query } = action;
+        const { query, page } = action;
+        const { hitsPerPage } = getState();
         dispatch({type: 'start_searching', query});
-        const results = await index.search(query, {hitsPerPage: getState().hitsPerPage})
+        const results = await index.search(query, {page, hitsPerPage})
+        console.log(results);
         dispatch({type: 'end_searching', results})
 
         results && results.nbHits > 0 ? dispatch({type: 'show_results', query}) : dispatch({type: 'show_results_not_found', query});
@@ -104,8 +107,6 @@ const Input = ({placeholder, query, ...props}) => {
         } else {
             const query = e.target.value;
             dispatch({type: 'searching', query});
-            // ideally when a search result is selected
-            // dispatch({type: 'add_recent_query', query});
         }
     };
 
@@ -168,8 +169,21 @@ const Hit = ({children, value, as='li', ...props}) => {
     return createElement(as, {...props, onClick}, children);
 };
 
+const MoreResults = ({children, as, ...props}) => {
+    const {state, dispatch} = useSearch();
+    if (state.showingLastPage) {
+        return null;
+    }
+
+    const onClick = () => {
+        dispatch({type: 'searching', query: state.query, page: state.page + 1})
+    }
+    return createElement(as, {...props, onClick}, children);
+}
+
 Search.Miss = Miss;
 Search.Status = Status;
 Search.Input = Input;
 Search.Hits = Hits;
+Search.MoreResults = MoreResults;
 Search.Hit = Hit;
