@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@headlessui/react": "^1.2.0",
     "@heroicons/react": "^1.0.1",
     "abortcontroller-polyfill": "^1.7.3",
     "algoliasearch": "^4.9.2",
