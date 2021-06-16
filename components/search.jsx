@@ -7,8 +7,8 @@ import {createContext, createElement, useContext, useEffect, useRef, useState} f
 const client = algoliasearch('BSEPWDMWHK', 'd5d31ebc204b43b0c1b6a4aa03e0658c');
 const index = client.initIndex('staging_articles');
 const initialState = {
-    query: '',
-    queries: [],
+    query: null,
+    queries: ['slack', 'microsoft'],
     searching: false,
     page: 0,
     showingRecentQueries: false,
@@ -22,7 +22,7 @@ const searchReducer = (state, action) => {
 
     switch(action.type) {
         case 'initial':
-            return {...initialState, hitsPerPage: state.hitsPerPage};
+            return {...initialState, hitsPerPage: state.hitsPerPage, onChange: state.onChange};
         case 'start_searching':
             return { ...state, query: action.query, searching: true, showingRecentQueries: false};
         case 'end_searching':
@@ -70,17 +70,37 @@ const useKeyPress = (key, action) => {
 
 
 const Search = ({children, hitsPerPage, onChange, className}) => {
-    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState, hitsPerPage, onChange }, actionHandlers);
+    const [state, dispatch] = useReducerAsync(searchReducer, {...initialState,
+        hitsPerPage,
+        onChange }, actionHandlers);
+
     const providerState = {
         state, dispatch
     }
+
+    const reset = e => {
+        dispatch({type: 'initial'});
+    };
+
+    useKeyPress('Escape', reset)
+
+    const ref = useRef();
     useEffect(() => {
-        console.log(`state changed`, state)
-    }, [state]);
+        const handleClickOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) {
+                dispatch({type: 'initial'});
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    });
 
     return (
         <SearchContext.Provider value={providerState}>
-            <div className={className}>
+            <div ref={ref} className={className}>
                 {children(state)}
             </div>
         </SearchContext.Provider>
@@ -97,8 +117,9 @@ const Input = ({placeholder, query, ...props}) => {
     const showRecentSearches = () => dispatch({type: 'show_recent_queries'});
 
 
+
     useEffect(() => {
-        if(state.searching) {
+        if(state.searching || state.query === null) {
             inputRef.current.value = state.query;
         }
     }, [state.query, state.searching, inputRef]);
@@ -117,32 +138,25 @@ const Input = ({placeholder, query, ...props}) => {
         }
     };
 
-    const reset = e => {
-        if (e.key === 'Escape') {
-            dispatch({type: 'initial'});
-        }
-    };
-
     return (<input
         {...props}
         type="text"
         ref={inputRef}
         value={query}
         placeholder={placeholder}
-        onKeyUp={reset}
         onChange={search}
         onFocus={showRecentSearches}
     />)
 };
 
 
-const RecentQueries = ({queries}) => (
-    <ul className="text-sm text-gray-300">
-        {queries.map(q => (
-            <li key={q}>{q}</li>
-        ))}
-    </ul>
-);
+const Query = ({query, children}) => {
+    const {dispatch} = useSearch();
+
+    return <li onClick={() => dispatch({type: 'searching', query})}>{children}</li>;
+};
+
+Search.Query = Query;
 
 const Hit = ({children, value, as='li', ...props}) => {
     const {state, dispatch} = useSearch();
