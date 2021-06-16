@@ -14,6 +14,7 @@
     "algoliasearch": "^4.9.2",
     "lodash": "^4.17.21",
     "next": "latest",
+    "next-plausible": "^1.6.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "use-reducer-async": "^2.0.1"

@@ -3,6 +3,7 @@ import { useReducerAsync } from "use-reducer-async";
 
 import algoliasearch from 'algoliasearch/lite';
 import {createContext, createElement, useContext, useEffect, useRef, useState} from "react";
+import {usePlausible} from "next-plausible";
 
 const client = algoliasearch('BSEPWDMWHK', 'd5d31ebc204b43b0c1b6a4aa03e0658c');
 const index = client.initIndex('staging_articles');
@@ -70,6 +71,7 @@ const useKeyPress = (key, action) => {
 
 
 const Search = ({children, hitsPerPage, onChange, className}) => {
+    const track = usePlausible();
     const [state, dispatch] = useReducerAsync(searchReducer, {...initialState,
         hitsPerPage,
         onChange }, actionHandlers);
@@ -77,6 +79,12 @@ const Search = ({children, hitsPerPage, onChange, className}) => {
     const providerState = {
         state, dispatch
     }
+
+    useEffect(() => {
+        if (state.searching) {
+            track('Search', {props: {query: state.query}});
+        }
+    }, [state.searching])
 
     const reset = e => {
         dispatch({type: 'initial'});
@@ -152,8 +160,13 @@ const Input = ({placeholder, query, ...props}) => {
 
 const Query = ({query, children}) => {
     const {dispatch} = useSearch();
+    const track = usePlausible();
 
-    return <li onClick={() => dispatch({type: 'searching', query})}>{children}</li>;
+    return <li onClick={() => {
+        track('RecentQueryUsed', {props: {query}})
+        dispatch({type: 'searching', query});
+    }
+    }>{children}</li>;
 };
 
 Search.Query = Query;
@@ -170,12 +183,14 @@ const Hit = ({children, value, as='li', ...props}) => {
 };
 
 const MoreResults = ({children, as ='div', ...props}) => {
+    const track = usePlausible();
     const {state, dispatch} = useSearch();
     if (state.showingLastPage) {
         return null;
     }
 
     const onClick = () => {
+        track('MoreResults', {props: {query: state.query, page: state.page + 1}});
         dispatch({type: 'searching', query: state.query, page: state.page + 1})
     }
     return createElement(as, {...props, onClick}, children);
