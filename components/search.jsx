@@ -164,11 +164,12 @@ const Hit = ({children, value, as='li', ...props}) => {
         state.onChange(value)
         // this one should be optional: for example, only if Search has enabled RecentQueries.
         dispatch({type: 'add_recent_query', query: state.query});
+        dispatch({type: 'initial'});
     }
     return createElement(as, {...props, onClick}, children);
 };
 
-const MoreResults = ({children, as, ...props}) => {
+const MoreResults = ({children, as ='div', ...props}) => {
     const {state, dispatch} = useSearch();
     if (state.showingLastPage) {
         return null;
